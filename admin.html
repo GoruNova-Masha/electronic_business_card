@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Редактор визитки</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: system-ui, sans-serif; background: #f0f2f8; padding: 2rem 1rem; color: #1a1a2e; }
+      .wrap { max-width: 640px; margin: 0 auto; }
+      h1 { color: #0a2463; margin-bottom: 0.5rem; font-size: 1.5rem; }
+      p.hint { color: #5a5a72; margin-bottom: 1.5rem; font-size: 0.9rem; }
+      label { display: block; font-weight: 600; font-size: 0.85rem; margin: 1rem 0 0.35rem; color: #0a2463; }
+      input, textarea { width: 100%; padding: 0.65rem 0.85rem; border: 1px solid #ccc; border-radius: 8px; font: inherit; }
+      textarea { min-height: 80px; resize: vertical; }
+      .row { display: grid; gap: 0.5rem; }
+      .actions { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+      button, a.btn { padding: 0.75rem 1.25rem; border-radius: 999px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; font-size: 0.9rem; }
+      .primary { background: #39ff14; color: #0a2463; }
+      .secondary { background: #fff; color: #0a2463; border: 2px solid #0a2463; }
+      .preview { margin-top: 1rem; }
+      pre { background: #0a2463; color: #e8f5e9; padding: 1rem; border-radius: 8px; overflow: auto; font-size: 0.75rem; max-height: 300px; }
+    </style>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Редактор визитки</h1>
+      <p class="hint">
+        Измените поля ниже и нажмите «Скачать config.js». Замените файл в папке проекта и
+        обновите страницу визитки.
+      </p>
+
+      <form id="editor">
+        <label>Имя</label>
+        <input name="name" id="f-name" />
+
+        <label>Должность</label>
+        <input name="title" id="f-title" />
+
+        <label>Подзаголовок</label>
+        <input name="subtitle" id="f-subtitle" />
+
+        <label>УТП</label>
+        <textarea name="utp" id="f-utp"></textarea>
+
+        <label>Услуги (по одной на строку)</label>
+        <textarea name="services" id="f-services" rows="5"></textarea>
+
+        <label>Заголовок кейса</label>
+        <input name="projectTitle" id="f-project-title" />
+
+        <label>Описание кейса</label>
+        <textarea name="projectDesc" id="f-project-desc"></textarea>
+
+        <label>Ссылка на бот (URL)</label>
+        <input name="projectUrl" id="f-project-url" placeholder="https://t.me/OlisTortiki_Bot" />
+
+        <label>Текст ссылки на бот</label>
+        <input name="projectLink" id="f-project-link" placeholder="@OlisTortiki_Bot" />
+
+        <label>Telegram</label>
+        <input name="telegram" id="f-telegram" />
+
+        <label>E-mail</label>
+        <input name="email" id="f-email" />
+
+        <label>Телефон (отображение)</label>
+        <input name="phoneDisplay" id="f-phone-display" />
+
+        <label>Телефон (для звонка, +7906...)</label>
+        <input name="phoneRaw" id="f-phone-raw" />
+
+        <label>URL визитки (для SEO и QR)</label>
+        <input name="seoUrl" id="f-seo-url" placeholder="https://..." />
+
+        <label>ID Яндекс Метрики</label>
+        <input name="ymId" id="f-ym" />
+
+        <label>ID Google Analytics</label>
+        <input name="gaId" id="f-ga" />
+      </form>
+
+      <div class="actions">
+        <button type="button" class="primary" id="download">Скачать config.js</button>
+        <a href="index.html" class="btn secondary">Открыть визитку</a>
+      </div>
+
+      <div class="preview">
+        <label>Предпросмотр config.js</label>
+        <pre id="preview"></pre>
+      </div>
+    </div>
+
+    <script>
+      const cfg = window.CARD_CONFIG;
+
+      function fillForm() {
+        document.getElementById("f-name").value = cfg.person.name;
+        document.getElementById("f-title").value = cfg.person.title;
+        document.getElementById("f-subtitle").value = cfg.person.subtitle;
+        document.getElementById("f-utp").value = cfg.person.utp;
+        document.getElementById("f-services").value = cfg.services.join("\n");
+        document.getElementById("f-project-title").value = cfg.project.title;
+        document.getElementById("f-project-desc").value = cfg.project.description;
+        document.getElementById("f-project-url").value = cfg.project.telegramUrl;
+        document.getElementById("f-project-link").value = cfg.project.linkLabel || "";
+        document.getElementById("f-telegram").value = cfg.contacts.telegram.handle;
+        document.getElementById("f-email").value = cfg.contacts.email.address;
+        document.getElementById("f-phone-display").value = cfg.contacts.phone.display;
+        document.getElementById("f-phone-raw").value = cfg.contacts.phone.raw;
+        document.getElementById("f-seo-url").value = cfg.seo.url;
+        document.getElementById("f-ym").value = cfg.analytics.yandexMetrikaId;
+        document.getElementById("f-ga").value = cfg.analytics.googleAnalyticsId;
+        updatePreview();
+      }
+
+      function buildConfig() {
+        const tg = document.getElementById("f-telegram").value.trim();
+        const handle = tg.startsWith("@") ? tg : "@" + tg;
+        const url = "https://t.me/" + handle.replace("@", "");
+
+        return {
+          person: {
+            name: document.getElementById("f-name").value.trim(),
+            title: document.getElementById("f-title").value.trim(),
+            subtitle: document.getElementById("f-subtitle").value.trim(),
+            utp: document.getElementById("f-utp").value.trim(),
+          },
+          services: document
+            .getElementById("f-services")
+            .value.split("\n")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          project: {
+            title: document.getElementById("f-project-title").value.trim(),
+            description: document.getElementById("f-project-desc").value.trim(),
+            telegramUrl: document.getElementById("f-project-url").value.trim() || url,
+            linkLabel: document.getElementById("f-project-link").value.trim(),
+          },
+          contacts: {
+            heading: "Давайте работать вместе!",
+            telegram: { label: "Telegram", handle, url },
+            email: {
+              label: "E-mail",
+              address: document.getElementById("f-email").value.trim(),
+            },
+            phone: {
+              label: "Телефон",
+              display: document.getElementById("f-phone-display").value.trim(),
+              raw: document.getElementById("f-phone-raw").value.trim(),
+            },
+          },
+          seo: {
+            title: document.getElementById("f-name").value.trim() + " — " + document.getElementById("f-title").value.trim(),
+            description: document.getElementById("f-utp").value.trim(),
+            url: document.getElementById("f-seo-url").value.trim(),
+            image: "assets/og-preview.png",
+          },
+          analytics: {
+            yandexMetrikaId: document.getElementById("f-ym").value.trim(),
+            googleAnalyticsId: document.getElementById("f-ga").value.trim(),
+          },
+        };
+      }
+
+      function toJsFile(data) {
+        return (
+          "// Редактируйте этот файл для обновления содержимого визитки без изменения HTML/CSS\n" +
+          "window.CARD_CONFIG = " +
+          JSON.stringify(data, null, 2) +
+          ";\n"
+        );
+      }
+
+      function updatePreview() {
+        document.getElementById("preview").textContent = toJsFile(buildConfig());
+      }
+
+      document.getElementById("editor").addEventListener("input", updatePreview);
+
+      document.getElementById("download").addEventListener("click", () => {
+        const content = toJsFile(buildConfig());
+        const blob = new Blob([content], { type: "application/javascript" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "config.js";
+        a.click();
+      });
+
+      fillForm();
+    </script>
+  </body>
+</html>
